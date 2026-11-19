@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AesthetixAI — Facial Structure Potential Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05070c;
+  --panel:rgba(17,22,32,.72);
+  --panel-solid:#10151f;
+  --line:rgba(255,255,255,.08);
+  --text:#eef2f8;
+  --muted:#9aa6b8;
+  --accent:#6ee7ff;
+  --accent2:#a78bfa;
+  --good:#34d399;
+  --warn:#fbbf24;
+  --bad:#f87171;
+  --radius:20px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  min-height:100vh;
+  color:var(--text);
+  font-family:Inter,system-ui,-apple-system,sans-serif;
+  background:
+    radial-gradient(1100px 700px at 12% -10%, rgba(110,231,255,.13), transparent 60%),
+    radial-gradient(900px 650px at 100% 0%, rgba(167,139,250,.12), transparent 55%),
+    #05070c;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(circle at 50% 20%,black,transparent 78%);
+}
+.shell{position:relative;z-index:1;max-width:1360px;margin:0 auto;padding:28px 20px 70px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:26px}
+.brand{display:flex;align-items:center;gap:13px}
+.logo{
+  width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#04121a;font-weight:800;font-family:"Space Grotesk",sans-serif;
+  box-shadow:0 12px 30px rgba(110,231,255,.20);
+}
+.brand h1{margin:0;font-size:19px;letter-spacing:-.02em;font-family:"Space Grotesk",sans-serif}
+.brand p{margin:2px 0 0;font-size:12px;color:var(--muted)}
+.status{
+  display:flex;align-items:center;gap:9px;padding:10px 15px;border:1px solid var(--line);
+  border-radius:999px;background:rgba(255,255,255,.04);font-size:12.5px;color:var(--muted);white-space:nowrap;
+}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 4px rgba(251,191,36,.13)}
+.dot.ready{background:var(--good);box-shadow:0 0 0 4px rgba(52,211,153,.14)}
+.dot.error{background:var(--bad);box-shadow:0 0 0 4px rgba(248,113,113,.14)}
+
+.hero{
+  border:1px solid var(--line);border-radius:28px;padding:34px;margin-bottom:22px;
+  background:linear-gradient(120deg,rgba(255,255,255,.06),rgba(255,255,255,.01));
+  backdrop-filter:blur(18px);
+}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+.hero h2{margin:0 0 12px;font-family:"Space Grotesk",sans-serif;font-size:clamp(31px,5vw,53px);line-height:1.03;letter-spacing:-.045em}
+.hero h2 span{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{max-width:660px;margin:0;color:var(--muted);font-size:15px;line-height:1.65}
+.actions{display:flex;flex-wrap:wrap;gap:11px;margin-top:24px}
+button{
+  font:inherit;color:var(--text);cursor:pointer;border:1px solid var(--line);
+  background:rgba(255,255,255,.05);padding:12px 18px;border-radius:13px;
+  transition:.2s ease;font-weight:600;font-size:13.5px;
+}
+button:hover{background:rgba(255,255,255,.10);transform:translateY(-1px)}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.primary{
+  border:0;color:#04121a;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  box-shadow:0 14px 32px rgba(110,231,255,.20);
+}
+.primary:hover{filter:brightness(1.07)}
+.ghost{background:transparent}
+.danger{color:#ffb4b4;border-color:rgba(248,113,113,.25);background:rgba(248,113,113,.08)}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(330px,.85fr);gap:20px}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+.card{
+  border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);
+  backdrop-filter:blur(20px);overflow:hidden;
+}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)}
+.card-head h3{margin:0;font-size:14.5px;letter-spacing:-.01em}
+.card-head span{font-size:11.5px;color:var(--muted)}
+.stage{position:relative;aspect-ratio:4/3;background:#070a10}
+#video,#canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#video{display:none}
+.empty{
+  position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:30px;color:var(--muted);
+  background:repeating-linear-gradient(45deg,rgba(255,255,255,.015) 0 12px,transparent 12px 24px);
+}
+.empty strong{display:block;color:var(--text);font-size:17px;margin-bottom:7px}
+.toolbar{display:flex;flex-wrap:wrap;gap:9px;padding:15px 18px;border-top:1px solid var(--line)}
+.switch{display:flex;gap:7px;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04);font-size:12px;color:var(--muted)}
+.switch input{accent-color:var(--accent)}
+
+.side{display:flex;flex-direction:column;gap:20px}
+.score-wrap{padding:22px}
+.score-row{display:flex;align-items:flex-end;justify-content:space-between;gap:18px}
+.score-label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.score{font-family:"Space Grotesk",sans-serif;font-size:56px;line-height:.9;font-weight:700;letter-spacing:-.05em}
+.score small{font-size:17px;color:var(--muted);font-weight:500}
+.bar{height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:15px}
+.bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.metric{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);font-size:13px}
+.metric:last-child{border:0}
+.metric b{font-family:"Space Grotesk",sans-serif;font-size:15px}
+.pill{font-size:10.5px;padding:4px 9px;border-radius:99px;background:rgba(255,255,255,.07);color:var(--muted)}
+.pill.good{color:var(--good);background:rgba(52,211,153,.11)}
+.pill.warn{color:var(--warn);background:rgba(251,191,36,.11)}
+.pill.bad{color:var(--bad);background:rgba(248,113,113,.11)}
+
+.controls{padding:18px 20px}
+.control{margin-bottom:17px}
+.control-top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px}
+.control-top b{font-weight:600}
+.control-top span{color:var(--muted)}
+input[type=range]{
+  width:100%;appearance:none;height:5px;border-radius:99px;background:rgba(255,255,255,.11);outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:4px solid #0b1018;
+  box-shadow:0 0 0 3px rgba(110,231,255,.28);cursor:pointer;
+}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid #0b1018;cursor:pointer}
+.sim-result{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding:14px;border:1px solid var(--line);border-radius:15px;background:rgba(110,231,255,.06)}
+.sim-result b{font-family:"Space Grotesk",sans-serif;font-size:25px}
+.rec{padding:18px 20px}
+.rec-item{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px;color:#cfd6e2;line-height:1.5}
+.rec-item:last-child{border:0}
+.rec-item i{width:7px;height:7px;margin-top:7px;border-radius:50%;background:var(--accent);flex:0 0 auto}
+.history{padding:8px}
+.history-item{display:flex;justify-content:space-between;gap:12px;padding:13px 14px;border-radius:13px;font-size:13px}
+.history-item:hover{background:rgba(255,255,255,.05)}
+.history-item span{color:var(--muted);font-size:12px}
+.notice{padding:13px 16px;border-radius:14px;border:1px solid rgba(251,191,36,.25);background:rgba(251,191,36,.08);color:#ffe4a3;font-size:12.5px;line-height:1.5;margin-bottom:18px}
+.hidden{display:none!important}
+footer{margin-top:34px;color:#66738a;font-size:12px;text-align:center;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">A</div>
+      <div>
+        <h1>AesthetixAI</h1>
+        <p>Facial Structure Potential Analyzer</p>
+      </div>
+    </div>
+    <div class="status"><i id="statusDot" class="dot"></i><span id="statusText">Loading vision model…</span></div>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">478-Point Facial Landmark Engine</div>
+    <h2>Measure structure.<br><span>Reveal your potential.</span></h2>
+    <p>Upload a clear, front-facing photo or use your camera. AesthetixAI analyzes facial geometry locally in your browser and estimates both your current presentation and an optimized potential range.</p>
+    <div class="actions">
+      <button class="primary" id="uploadBtn">Upload Photo</button>
+      <button id="cameraBtn">Use Camera</button>
+      <button id="sampleBtn">Use Sample</button>
+      <button class="ghost" id="analyzeBtn" disabled>Analyze Face</button>
+      <button class="ghost" id="resetBtn">Reset</button>
+    </div>
+    <input id="fileInput" type="file" accept="image/*" class="hidden">
+  </section>
+
+  <div id="notice" class="notice hidden"></div>
+
+  <main class="grid">
+    <section class="card">
+      <div class="card-head">
+        <h3>Landmark Geometry</h3>
+        <span id="viewportStatus">Viewport ready</span>
+      </div>
+      <div class="stage">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="canvas"></canvas>
+        <div id="emptyState" class="empty">
+          <div>
+            <strong>No image loaded</strong>
+            Upload a front-facing photo or start the camera to begin.
+          </div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <label class="switch"><input type="checkbox" id="showMesh" checked> Mesh</label>
+        <label class="switch"><input type="checkbox" id="showVectors" checked> Structure vectors</label>
+        <label class="switch"><input type="checkbox" id="showThirds" checked> Golden thirds</label>
+        <button class="ghost" id="captureBtn" disabled>Capture</button>
+        <button class="ghost" id="analyzeBtn2" disabled>Analyze</button>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="card">
+        <div class="card-head"><h3>Current Rating</h3><span>Geometric baseline</span></div>
+        <div class="score-wrap">
+          <div class="score-row">
+            <div>
+              <div class="score-label">Current</div>
+              <div class="score"><span id="currentScore">--</span><small>/10</small></div>
+            </div>
+            <div style="text-align:right">
+              <div class="score-label">Potential</div>
+              <div class="score" style="color:var(--accent)"><span id="potentialScore">--</span><small>/10</small></div>
+            </div>
+          </div>
+          <div class="bar"><i id="scoreBar"></i></div>
+          <div style="height:14px"></div>
+          <div class="metric"><span>Genetic structure</span><b id="structureScore">--</b></div>
+          <div class="metric"><span>Facial harmony</span><b id="harmonyScore">--</b></div>
+          <div class="metric"><span>Detected face</span><span class="pill" id="facePill">Awaiting scan</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h3>Potential Simulator</h3><span>Soft-tissue optimization</span></div>
+        <div class="controls">
+          <div class="control">
+            <div class="control-top"><b>Facial leanness</b><span id="leannessValue">65%</span></div>
+            <input type="range" id="leanness" min="0" max="100" value="65">
+          </div>
+          <div class="control">
+            <div class="control-top"><b>Skin clarity</b><span id="skinValue">70%</span></div>
+            <input type="range" id="skin" min="0" max="100" value="70">
+          </div>
+          <div class="control">
+            <div class="control-top"><b>Hair & brow framing</b><span id="hairValue">68%</span></div>
+            <input type="range" id="hair" min="0" max="100" value="68">
+          </div>
+          <div class="control">
+            <div class="control-top"><b>Posture & alignment</b><span id="postureValue">72%</span></div>
+            <input type="range" id="posture" min="0" max="100" value="72">
+          </div>
+          <div class="sim-result">
+            <div>
+              <div class="score-label">Simulated rating</div>
+              <b id="simulatedScore">--</b>
+            </div>
+            <div style="text-align:right">
+              <div class="score-label">Upside</div>
+              <b id="upside" style="color:var(--good)">0.00</b>
+            </div>
+          </div>
+          <button class="primary" id="simulateBtn" style="width:100%;margin-top:14px">Simulate Peak Potential</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h3>Improvement Roadmap</h3><span>Priority actions</span></div>
+        <div class="rec" id="recommendations">
+          <div class="rec-item"><i></i>Upload a clear, evenly lit, front-facing photograph to generate personalized recommendations.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h3>Recent Analyses</h3><span>Saved locally</span></div>
+        <div class="history" id="history"><div class="history-item"><span>No snapshots yet</span></div></div>
+        <div class="toolbar"><button class="danger" id="clearHistory">Clear history</button></div>
+      </section>
+    </aside>
+  </main>
+
+  <footer>
+    AesthetixAI provides geometric visual feedback only. It cannot diagnose medical conditions, determine attractiveness, or predict real-world outcomes.<br>
+    Facial landmarks and image analysis run locally in your browser; no photo is uploaded by this page.
+  </footer>
+</div>
+
+<script type="module">
+import {FaceLandmarker, FilesetResolver} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+
+const $=id=>document.getElementById(id);
+const video=$("video"),canvas=$("canvas"),ctx=canvas.getContext("2d");
+const fileInput=$("fileInput");
+let landmarker=null,stream=null,image=null,results=null,analysis=null;
+let cameraActive=false;
+
+const setStatus=(text,state="loading")=>{
+  $("statusText").textContent=text;
+  $("statusDot").className="dot"+(state==="ready"?" ready":state==="error"?" error":"");
+};
+
+function showNotice(msg){
+  $("notice").textContent=msg;
+  $("notice").classList.remove("hidden");
+}
+function hideNotice(){$("notice").classList.add("hidden")}
+
+async function init(){
+  try{
+    const fileset=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+    landmarker=await FaceLandmarker.createFromOptions(fileset,{
+      baseOptions:{
+        modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+        delegate:"GPU"
+      },
+      outputFaceBlendshapes:false,
+      runningMode:"IMAGE",
+      numFaces:1
+    });
+    setStatus("Vision model ready","ready");
+    $("viewportStatus").textContent="Model ready";
+  }catch(err){
+    console.error(err);
+    setStatus("Model unavailable — check connection","error");
+    showNotice("The facial-landmark model could not load. Check your internet connection, then reload the page.");
+  }
+}
+
+function fitCanvas(w,h){
+  canvas.width=w;canvas.height=h;
+}
+
+function loadFile(file){
+  if(!file||!file.type.startsWith("image/"))return showNotice("Please choose a valid image file.");
+  stopCamera();
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      image=img;results=null;analysis=null;
+      fitCanvas(img.naturalWidth,img.naturalHeight);
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      $("emptyState").classList.add("hidden");
+      $("analyzeBtn").disabled=false;$("analyzeBtn2").disabled=false;
+      $("viewportStatus").textContent="Image loaded";
+      hideNotice();
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function startCamera(){
+  try{
+    stopCamera();
+    stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:960},facingMode:"user"}});
+    video.srcObject=stream;
+    video.style.display="block";
+    await video.play();
+    cameraActive=true;
+    fitCanvas(video.videoWidth||1280,video.videoHeight||720);
+    $("emptyState").classList.add("hidden");
+    $("captureBtn").disabled=false;
+    $("viewportStatus").textContent="Camera live";
+    drawCamera();
+  }catch(err){
+    showNotice("Camera access was blocked or is unavailable. Allow camera permission or upload a photo instead.");
+  }
+}
+
+function stopCamera(){
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  cameraActive=false;
+  video.style.display="none";
+  $("captureBtn").disabled=true;
+}
+
+function drawCamera(){
+  if(!cameraActive)return;
+  if(video.videoWidth&&canvas.width!==video.videoWidth)fitCanvas(video.videoWidth,video.videoHeight);
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  if(results)drawOverlay(results);
+  requestAnimationFrame(drawCamera);
+}
+
+async function analyze(){
+  if(!landmarker)return showNotice("The vision model is still loading. Please wait a moment and try again.");
+  try{
+    let source=image;
+    if(cameraActive){
+      const temp=document.createElement("canvas");
+      temp.width=video.videoWidth;temp.height=video.videoHeight;
+      temp.getContext("2d").drawImage(video,0,0);
+      source=temp;
+    }
+    if(!source)return showNotice("Load a photo or start the camera first.");
+    results=landmarker.detect(source);
+    if(!results.faceLandmarks?.length){
+      analysis=null;
+      showNotice("No face was detected. Use a clear, well-lit, front-facing photograph with the full face visible.");
+      updateScores(null);
+      return;
+    }
+    analysis=calculateAnalysis(results.faceLandmarks[0],canvas.width,canvas.height);
+    drawOverlay(results);
+    updateScores(analysis);
+    updateRecommendations(analysis);
+    saveAnalysis(analysis);
+    hideNotice();
+    $("viewportStatus").textContent="Analysis complete";
+  }catch(err){
+    console.error(err);
+    showNotice("Analysis failed. Try another clear, front-facing photograph.");
+  }
+}
+
+function dist(a,b,w,h){return Math.hypot((a.x-b.x)*w,(a.y-b.y)*h)}
+function midpoint(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
+function clamp(v,min,max){return Math.min(max,Math.max(min,v))}
+function scoreFromIdeal(value,ideal,tolerance){
+  return clamp(100-Math.abs(value-ideal)/tolerance*100,0,100);
+}
+
+function calculateAnalysis(lm,w,h){
+  const leftEye=lm[33],rightEye=lm[263];
+  const nose=lm[1],chin=lm[152],forehead=lm[10];
+  const leftCheek=lm[234],rightCheek=lm[454];
+  const leftJaw=lm[172],rightJaw=lm[397];
+  const mouthLeft=lm[61],mouthRight=lm[291];
+
+  const faceWidth=dist(leftCheek,rightCheek,w,h);
+  const faceHeight=dist(forehead,chin,w,h);
+  const eyeDistance=dist(leftEye,rightEye,w,h);
+  const jawWidth=dist(leftJaw,rightJaw,w,h);
+  const mouthWidth=dist(mouthLeft,mouthRight,w,h);
+
+  const upperThird=dist(forehead,midpoint(leftEye,rightEye),w,h);
+  const middleThird=dist(midpoint(leftEye,rightEye),nose,w,h);
+  const lowerThird=dist(nose,chin,w,h);
+  const thirdTotal=upperThird+middleThird+lowerThird||1;
+
+  const thirdsBalance=100-Math.min(100,(
+    Math.abs(upperThird/thirdTotal-.333)+
+    Math.abs(middleThird/thirdTotal-.333)+
+    Math.abs(lowerThird/thirdTotal-.333)
+  )*300);
+
+  const widthHeightRatio=faceHeight?faceWidth/faceHeight:0;
+  const proportionScore=scoreFromIdeal(widthHeightRatio,.78,.16);
+  const eyeSpacingScore=scoreFromIdeal(faceWidth?eyeDistance/faceWidth:.46,.46,.09);
+  const jawScore=scoreFromIdeal(faceWidth?jawWidth/faceWidth:.86,.86,.13);
+  const mouthScore=scoreFromIdeal(faceWidth?mouthWidth/faceWidth:.38,.38,.10);
+
+  const symmetry=calculateSymmetry(lm,w,h);
+  const structure=(proportionScore*.34+jawScore*.24+eyeSpacingScore*.18+symmetry*.24);
+  const harmony=(thirdsBalance*.42+symmetry*.32+proportionScore*.26);
+  const current=clamp((structure*.58+harmony*.42)/10,1,10);
+
+  return{
+    date:new Date().toLocaleString(),
+    current,
+    structure:structure/10,
+    harmony:harmony/10,
+    metrics:{
+      faceWidth:faceWidth.toFixed(1),
+      faceHeight:faceHeight.toFixed(1),
+      widthHeightRatio:widthHeightRatio.toFixed(3),
+      eyeDistance:eyeDistance.toFixed(1),
+      jawWidth:jawWidth.toFixed(1),
+      thirdsBalance:thirdsBalance.toFixed(1),
+      symmetry:symmetry.toFixed(1)
+    }
+  };
+}
+
+function calculateSymmetry(lm,w,h){
+  const pairs=[[33,263],[61,291],[234,454],[172,397],[133,362],[70,300]];
+  const center=lm[168]||lm[1];
+  let total=0;
+  pairs.forEach(([a,b])=>{
+    const dLeft=dist(lm[a],center,w,h);
+    const dRight=dist(lm[b],center,w,h);
+    const diff=Math.abs(dLeft-dRight)/Math.max(dLeft,dRight,1);
+    total+=clamp(100-diff*260,0,100);
+  });
+  return total/pairs.length;
+}
+
+function drawOverlay(detection){
+  const lm=detection.faceLandmarks[0];
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(image)ctx.drawImage(image,0,0,canvas.width,canvas.height);
+  else ctx.drawImage(video,0,0,canvas.width,canvas.height);
+
+  const scale=canvas.width/900;
+  ctx.lineCap="round";ctx.lineJoin="round";
+
+  if($("showThirds").checked){
+    const forehead=lm[10],chin=lm[152],nose=lm[1];
+    const eyeMid=midpoint(lm[33],lm[263]);
+    ctx.strokeStyle="rgba(110,231,255,.55)";ctx.lineWidth=Math.max(1.3,scale*1.7);
+    [forehead,eyeMid,nose,chin].forEach(p=>{
+      ctx.beginPath();ctx.moveTo(p.x*w0(),0);ctx.lineTo(p.x*w0(),canvas.height);ctx.stroke();
+    });
+  }
+
+  if($("showMesh").checked){
+    ctx.strokeStyle="rgba(167,139,250,.35)";
+    ctx.lineWidth=Math.max(.5,scale*.75);
+    FaceLandmarker.FACE_LANDMARKS_TESSELATION?.connections?.forEach(({start,end})=>{
+      const a=lm[start],b=lm[end];
+      if(!a||!b)return;
+      ctx.beginPath();ctx.moveTo(a.x*canvas.width,a.y*canvas.height);
+      ctx.lineTo(b.x*canvas.width,b.y*canvas.height);ctx.stroke();
+    });
+  }
+
+  if($("showVectors").checked){
+    const lines=[[234,454],[10,152],[33,263],[61,291],[172,397]];
+    ctx.strokeStyle="rgba(110,231,255,.9)";
+    ctx.lineWidth=Math.max(1.5,scale*2);
+    lines.forEach(([a,b])=>{
+      const p=lm[a],q=lm[b];
+      ctx.beginPath();ctx.moveTo(p.x*canvas.width,p.y*canvas.height);
+      ctx.lineTo(q.x*canvas.width,q.y*canvas.height);ctx.stroke();
+    });
+    ctx.fillStyle="rgba(110,231,255,.95)";
+    lm.forEach((p,i)=>{
+      if(i%12===0){
+        ctx.beginPath();
+        ctx.arc(p.x*canvas.width,p.y*canvas.height,Math.max(1.1,scale*1.35),0,Math.PI*2);
+        ctx.fill();
+      }
+    });
+  }
+}
+
+function w0(){return canvas.width}
+
+function updateScores(a){
+  if(!a){
+    ["currentScore","potentialScore","structureScore","harmonyScore"].forEach(id=>$(id).textContent="--");
+    $("scoreBar").style.width="0%";
+    $("facePill").textContent="No face detected";
+    $("facePill").className="pill bad";
+    $("simulatedScore").textContent="--";$("upside").textContent="0.00";
+    return;
+  }
+  const current=a.current;
+  const potential=calculatePotential(current);
+  $("currentScore").textContent=current.toFixed(1);
+  $("potentialScore").textContent=potential.toFixed(1);
+  $("structureScore").textContent=a.structure.toFixed(1)+"/10";
+  $("harmonyScore").textContent=a.harmony.toFixed(1)+"/10";
+  $("scoreBar").style.width=(current*10)+"%";
+  $("facePill").textContent="Face detected";
+  $("facePill").className="pill good";
+  updateSimulation(a);
+}
+
+function calculatePotential(current){
+  const leanness=+$("leanness").value/100;
+  const skin=+$("skin").value/100;
+  const hair=+$("hair").value/100;
+  const posture=+$("posture").value/100;
+  const modifier=(leanness*.34+skin*.24+hair*.20+posture*.22);
+  return clamp(current+(10-current)*modifier*.68,Math.min(current+0.1,10),10);
+}
+
+function updateSimulation(a){
+  if(!a)return;
+  const simulated=calculatePotential(a.current);
+  $("simulatedScore").textContent=simulated.toFixed(1);
+  $("upside").textContent="+"+Math.max(0,simulated-a.current).toFixed(2);
+}
+
+function updateRecommendations(a){
+  const recs=[];
+  if(!a){
+    recs.push("Use a neutral expression, level head position, and even lighting for the most reliable geometric reading.");
+  }else{
+    const m=a.metrics;
+    if(a.structure<6.5)recs.push("Prioritize a leaner facial presentation: maintain a sustainable body-fat level, adequate sleep, hydration, and consistent resistance training.");
+    if(a.harmony<6.5)recs.push("Improve visual balance with a haircut that suits your face shape, well-groomed brows, and intentional facial-hair styling where appropriate.");
+    if(m.symmetry<72)recs.push("Use level lighting and a straight-on camera angle; posture and head tilt can materially affect apparent symmetry.");
+    if(m.thirdsBalance<72)recs.push("Hairstyle volume, brow shaping, and facial-hair boundaries can visually balance the upper, middle, and lower facial thirds.");
+    if(m.widthHeightRatio>.85)recs.push("A narrower visual face width can be supported through controlled leanness, vertical hairstyle volume, and a defined jaw-area grooming approach.");
+    if(m.widthHeightRatio<.70)recs.push("Avoid excessive vertical hairstyle volume; choose a style that adds balanced width and keeps the lower face visually proportional.");
+    recs.push("Focus on controllable presentation: skincare consistency, grooming, posture, photographic lighting, and a sustainable fitness routine.");
+  }
+  $("recommendations").innerHTML=recs.map(r=>`<div class="rec-item"><i></i>${r}</div>`).join("");
+}
+
+function saveAnalysis(a){
+  const history=JSON.parse(localStorage.getItem("aesthetix_history")||"[]");
+  history.unshift({date:a.date,current:a.current,potential:calculatePotential(a.current)});
+  localStorage.setItem("aesthetix_history",JSON.stringify(history.slice(0,8)));
+  renderHistory();
+}
+
+function renderHistory(){
+  const history=JSON.parse(localStorage.getItem("aesthetix_history")||"[]");
+  $("history").innerHTML=history.length
+    ?history.map(h=>`<div class="history-item"><div><b>${h.current.toFixed(1)}/10</b><br><span>${h.date}</span></div><span>Potential ${h.potential.toFixed(1)}</span></div>`).join("")
+    :'<div class="history-item"><span>No snapshots yet</span></div>';
+}
+
+function capture(){
+  if(!cameraActive)return;
+  const temp=document.createElement("canvas");
+  temp.width=video.videoWidth;temp.height=video.videoHeight;
+  temp.getContext("2d").drawImage(video,0,0);
+  const img=new Image();
+  img.onload=()=>{
+    image=img;fitCanvas(img.width,img.height);
+    ctx.drawImage(img,0,0);
+    $("analyzeBtn").disabled=false;$("analyzeBtn2").disabled=false;
+  };
+  img.src=temp.toDataURL("image/jpeg",.95);
+  stopCamera();
+}
+
+function reset(){
+  stopCamera();image=null;results=null;analysis=null;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  $("emptyState").classList.remove("hidden");
+  $("analyzeBtn").disabled=true;$("analyzeBtn2").disabled=true;
+  $("viewportStatus").textContent="Viewport ready";
+  updateScores(null);
+  $("recommendations").innerHTML='<div class="rec-item"><i></i>Upload a clear, evenly lit, front-facing photograph to generate personalized recommendations.</div>';
+}
+
+$("uploadBtn").onclick=()=>fileInput.click();
+fileInput.onchange=e=>loadFile(e.target.files[0]);
+$("cameraBtn").onclick=startCamera;
+$("captureBtn").onclick=capture;
+$("analyzeBtn").onclick=analyze;
+$("analyzeBtn2").onclick=analyze;
+$("resetBtn").onclick=reset;
+$("sampleBtn").onclick=()=>{
+  showNotice("Add a sample image file named sample.jpg beside this HTML file, or upload any front-facing photo.");
+};
+$("simulateBtn").onclick=()=>analysis&&updateSimulation(analysis);
+["leanness","skin","hair","posture"].forEach(id=>{
+  $(id).oninput=e=>{
+    $(id+"Value").textContent=e.target.value+"%";
+    if(analysis)updateSimulation(analysis);
+  };
+});
+$("clearHistory").onclick=()=>{
+  localStorage.removeItem("aesthetix_history");
+  renderHistory();
+};
+window.addEventListener("beforeunload",stopCamera);
+
+renderHistory();
+init();
+</script>
+</body>
+</html>
